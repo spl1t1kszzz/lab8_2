@@ -9,15 +9,14 @@
 // This function creates the matrix.
 int **createMatrix(const int *numNodes) {
     int **matrix = calloc(*numNodes + 1, sizeof(int*));
-    for (int i = 1; i < *numNodes + 1; ++i) {
+    for (int i = 1; i < *numNodes + 1; ++i)
         *(matrix + i) = calloc(*numNodes + 1, sizeof(int));
-    }
     return matrix;
 }
 
 // This functions frees the matrix.
-void freeMatrix(int **matrix, const int *numNodes) {
-    for (int i = 1; i < *numNodes + 1; i++)
+void freeMatrix(int **matrix, const int numNodes) {
+    for (int i = 1; i < numNodes + 1; i++)
         free(*(matrix + i));
     free(matrix);
 }
@@ -80,38 +79,44 @@ int fillMatrix(FILE *in, FILE *out, int **matrix, const int* numNodes, const int
     return 0;
 }
 
-// This function creates tags array.
-bool* createTags(int* numNodes) {
-    bool* tags = calloc(*numNodes + 1, sizeof(bool));
-    *(tags + 1) = true;
-    return tags;
+// This functions fills len array.
+void fillLen(unsigned int* len, int numNodes) {
+    for (int i = 1; i < numNodes + 1; ++i) {
+        *(len + i) = infinity;
+    }
+    *(len + 1) = 0;
 }
 
-// This function finds the closest untagged node.
-void findClosestNode(int** matrix, int* numNodes, bool* tags, int index, int* first, int* second, unsigned int* min) {
-    for (int i = 1; i < *numNodes + 1; ++i) {
-        // If node is untagged and if there is a way, we are updating the values.
-        if (!*(tags + i) && *(*(matrix + index) + i) && (unsigned int) *(*(matrix + i) + index) < *min){
-            *min = (unsigned int) *(*(matrix + i) + index);
-            *first = index;
-            *second = i;
-        }
-    }
-    return;
+// This function fills sel array.
+void fillSel(int* sel, int numNodes) {
+    for (int i = 1; i < numNodes + 1; ++i)
+        *(sel + i) = -1;
+}
+
+// This function finds the closest vertex.
+int findClosestVertex(int numNodes, const unsigned int *len, const bool *tags) {
+    int vertex = -1;
+    for (int i = 1; i < numNodes + 1; i++)
+        if (!*(tags + i) && ((vertex == -1 || *(len + vertex) > *(len + i))))
+            vertex = i;
+    return vertex;
 }
 
 // This is the Prim's algorithm.
-void prim(int** matrix, int* numNodes, bool*tags, FILE* out) {
-    int count = 1;
-    while (count < *numNodes) {
-        unsigned int min = infinity;
-        int first = 0;
-        int second = 0;
-        for (int i = 1; i < *numNodes + 1; i++)
-            if (*(tags + i))
-                findClosestNode(matrix, numNodes, tags,i, &first, &second, &min);
-        fprintf(out, "%d %d\n", first, second);
-        *(tags + second) = true;
-        count++;
+void prim(int** matrix, int numNodes, bool*tags, unsigned int* len, int* sel, FILE* out) {
+    fillLen(len, numNodes);
+    fillSel(sel, numNodes);
+    for (int i = 1; i < numNodes + 1; ++i) {
+        int vertex = findClosestVertex(numNodes, len, tags);
+        if (vertex == -1)
+            break;
+        *(tags + vertex) = true;
+        for (int j = 1; j < numNodes + 1; ++j)
+            if ((unsigned int) *(*(matrix + vertex) + j) < *(len + j) && *(*(matrix + vertex) + j) != 0) {
+                *(len + j) = (unsigned int)*(*(matrix + vertex) + j);
+                *(sel + j) = vertex;
+            }
+        if (*(sel + vertex) != -1)
+            fprintf(out, "%d %d\n", *(sel + vertex) ,vertex);
     }
 }
